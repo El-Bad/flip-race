@@ -1,0 +1,3 @@
+node_modules/
+# server secret key and saved profiles - never commit these
+data/

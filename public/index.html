@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flip Race</title>
+<!-- Tabler icons (the icon set Mantine uses) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.50.0/dist/tabler-icons.min.css">
+<style>
+  :root { --red: #e53935; --green: #43a047; --panel: #2a2a33; --muted: #999; --gold: #ffd54f; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif; background: #1e1e24; color: #eee;
+    margin: 0; padding: 24px 16px; display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+  h1 .ti { color: var(--gold); }
+  .ti { font-size: 1.1em; vertical-align: -0.12em; }
+  button {
+    font-size: 15px; padding: 8px 16px; border: none; border-radius: 8px;
+    background: #3a3a46; color: #eee; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  }
+  button:hover { background: #4a4a58; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.primary { background: #ffb300; color: #222; font-weight: bold; }
+  button.primary:hover { background: #ffc233; }
+  input, select {
+    font-size: 16px; padding: 8px 10px; border-radius: 8px; border: 1px solid #444;
+    background: #15151a; color: #eee;
+  }
+  .panel { background: var(--panel); border-radius: 10px; padding: 14px 16px; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  .error { color: #ff6b6b; min-height: 20px; font-size: 14px; }
+  .star { color: var(--gold); }
+
+  /* Join screen */
+  #joinScreen { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
+  #joinScreen label { font-size: 13px; color: var(--muted); margin-bottom: -6px; }
+  #roomInput { text-transform: uppercase; letter-spacing: 3px; }
+
+  /* Game screen */
+  #gameScreen { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 16px; }
+  #topBar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; }
+  #roomCode { font-size: 22px; font-weight: bold; letter-spacing: 4px; color: var(--gold); }
+  #pointsBadge { color: var(--gold); font-weight: bold; margin-left: 14px; }
+  #layout { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  #playArea { flex: 1 1 420px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #side { flex: 1 1 320px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  #hostControls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  #waitingHost { text-align: center; }
+  #timer { font-size: 32px; font-weight: bold; font-variant-numeric: tabular-nums; min-height: 44px;
+           display: flex; align-items: center; gap: 8px; }
+  #timer.countdown { color: var(--gold); font-size: 44px; }
+  #timer.done { color: var(--gold); }
+
+  #board {
+    display: grid; width: min(420px, 90vw); gap: 6px;
+    user-select: none; touch-action: manipulation;
+  }
+  #board .cell {
+    aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4); transition: background 0.12s, transform 0.08s;
+  }
+  #board.small .cell { border-radius: 5px; }
+  #board .cell:active { transform: scale(0.94); }
+  #board.locked .cell { cursor: default; }
+  #board.hidden-board .cell { background: #444 !important; animation: none !important; box-shadow: none !important; }
+  #boardMsg { color: var(--muted); text-align: center; min-height: 20px; }
+
+  /* Optional status dots: a plain red/green dot in each square, readable in any theme */
+  #board .cell { position: relative; }
+  #board.dots .cell.red::after, #board.dots .cell.green::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 11%; aspect-ratio: 1;
+    transform: translate(-50%, -50%); border-radius: 50%; max-width: 14px; min-width: 6px;
+    border: 1.5px solid rgba(255,255,255,0.9); box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
+  }
+  #board.dots .cell.red::after { background: #e53935; }
+  #board.dots .cell.green::after { background: #43a047; }
+  #board.hidden-board .cell::after { display: none; }   /* don't reveal the board during the countdown */
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+  .shopOption { padding: 10px 16px; border-bottom: 1px solid #383844; color: #ddd; }
+  .toggle input { width: 16px; height: 16px; accent-color: #ffb300; cursor: pointer; }
+  .red { background: var(--red); }
+  .green { background: var(--green); }
+
+  /* Obstacles: blocked squares (same look in every theme) */
+  #board .cell.blocked, .mini div.blocked {
+    background: repeating-linear-gradient(45deg, #2c2c2c 0 5px, #161616 5px 10px) !important;
+    box-shadow: inset 0 0 0 2px #0c0c0c !important; animation: none !important; filter: none !important;
+  }
+  #board .cell.blocked { cursor: not-allowed; }
+  #board .cell.blocked:active { transform: none; }
+
+  /* Players */
+  #players { display: flex; flex-direction: column; gap: 8px; }
+  .player { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; background: #33333d; }
+  .player.me { outline: 2px solid #ffb300; }
+  .player.offline { opacity: 0.45; }
+  .player .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .player .name { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player .name .ti-crown { color: var(--gold); }
+  .player .stat { font-size: 13px; color: var(--muted); }
+  .player .stat.fin { color: var(--gold); }
+  .player .meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .player .wins { font-size: 13px; color: var(--muted); white-space: nowrap; text-align: right; display: flex; flex-direction: column; gap: 2px; }
+  .mini { display: grid; gap: 1px; width: 64px; flex-shrink: 0; }
+  .mini div { aspect-ratio: 1; border-radius: 2px; }
+  .mini .sol { outline: 2px solid #fff; outline-offset: -2px; }
+
+  /* Theme quality badge: tier name + 4 quality bars (more bars = better) */
+  .tier-badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+    padding: 2px 7px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.3px;
+  }
+  .tier-badge .q { display: inline-flex; gap: 2px; }
+  .tier-badge .q span { width: 3px; height: 9px; border-radius: 1px; background: currentColor; opacity: 0.25; }
+  .tier-badge .q span.on { opacity: 1; }
+  .tier-free      { background: #3a3a44; color: #b0b0b8; }
+  .tier-basic     { background: #1d3a31; color: #63e6be; }
+  .tier-medium    { background: #1b2d47; color: #74c0fc; }
+  .tier-legendary { background: #3a1d48; color: #e599f7; }
+
+  h3 { margin: 0 0 10px; font-size: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 5px 6px; text-align: left; }
+  th { color: var(--muted); font-weight: normal; border-bottom: 1px solid #444; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.pts { color: var(--gold); }
+  tr.me td { color: #ffb300; }
+  .place { display: inline-flex; align-items: center; gap: 2px; font-weight: bold; }
+  .place.p1 { color: #ffd43b; } .place.p2 { color: #ced4da; } .place.p3 { color: #e8a26a; }
+  #optimalRow { display: flex; gap: 12px; align-items: center; margin-top: 10px; font-size: 14px; }
+
+  #solverPanel {
+    display: flex; gap: 14px; align-items: center; background: #34343f;
+    border: 1px dashed #ffb300; border-radius: 10px; padding: 10px 14px; max-width: 420px;
+  }
+  #solverPanel .mini { width: 120px; gap: 2px; }
+  #solverText { font-size: 14px; }
+  #solverText b, #solverText .ti { color: #ffb300; }
+
+  /* Profile */
+  #profileStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .statBox { background: #33333d; border-radius: 8px; padding: 8px; text-align: center; }
+  .statBox .v { font-size: 18px; font-weight: bold; font-variant-numeric: tabular-nums; }
+  .statBox .k { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .statBox.win .v { color: #69db7c; } .statBox.loss .v { color: #ff8787; }
+  #profileBests { display: flex; flex-direction: column; gap: 6px; }
+  .bestRow { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 6px; border-radius: 8px; background: #33333d; }
+  .bestRow .mini { width: 44px; }
+  .bestRow .size { font-weight: bold; width: 46px; }
+  .bestRow .time { color: var(--gold); font-weight: bold; font-variant-numeric: tabular-nums; }
+  .bestRow .when { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
+
+  details summary { cursor: pointer; font-weight: bold; }
+  .pastRound { margin-top: 10px; font-size: 14px; }
+  .pastRound ol { margin: 4px 0 0; padding-left: 22px; }
+
+  /* ---------- Shop (slides over the page, doesn't push it) ---------- */
+  #shop {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 300px; z-index: 20;
+    background: #24242c; border-right: 1px solid #383844; box-shadow: 4px 0 24px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; transition: transform 0.22s ease;
+  }
+  #shop.collapsed { transform: translateX(-300px); box-shadow: none; }
+  #shopToggle {
+    position: absolute; right: -38px; top: 16px; width: 38px; padding: 12px 0;
+    border-radius: 0 10px 10px 0; background: #24242c; border: 1px solid #383844; border-left: none;
+    writing-mode: vertical-rl; font-weight: bold; letter-spacing: 2px; font-size: 14px; gap: 8px;
+  }
+  #shopToggle .ti { writing-mode: horizontal-tb; }
+  #shop .head { padding: 16px 16px 10px; border-bottom: 1px solid #383844; }
+  #shop .head h2 { margin: 0 0 8px; font-size: 18px; }
+  #shopStars { font-size: 18px; font-weight: bold; color: var(--gold); display: flex; align-items: center; gap: 6px; }
+  #shopBest { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  #shop .howto { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  #shopError { font-size: 12px; min-height: 0; margin-top: 4px; }
+  #themeList { overflow-y: auto; padding: 4px 12px 24px; flex: 1; }
+  .tierHead { margin: 16px 4px 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .tierHead .unlock { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 3px; text-align: right; }
+  .tierHead .unlock.ok { color: #69db7c; }
+  .themeItem {
+    display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px;
+    background: #2e2e38; margin-bottom: 6px; border: 2px solid transparent;
+  }
+  .themeItem.equipped { border-color: var(--gold); }
+  .themeItem.locked .mini { opacity: 0.55; }
+  .themeItem .mini { width: 46px; gap: 2px; padding: 3px; border-radius: 5px; background: #1b1b22; }
+  .themeItem .tinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .themeItem .tname { font-weight: bold; font-size: 14px; }
+  .themeItem .tdesc { font-size: 12px; color: var(--muted); }
+  .themeItem button { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
+  .themeItem button.buy { background: #ffb300; color: #222; font-weight: bold; }
+  .themeItem button.buy:disabled { background: #4a4a55; color: #aaa; opacity: 1; }
+
+  /* ---------- Board themes ----------
+     .red = square still to flip, .green = done. Each theme restyles both,
+     on the main board (#board) and on every mini board (.mini). */
+  @keyframes flow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes hue { to { filter: hue-rotate(360deg); } }
+  @keyframes shimmer { from { background-position: -150% 0, 0 0; } to { background-position: 250% 0, 0 0; } }
+  @keyframes twinkle { 50% { opacity: 0.75; } }
+
+  /* Basic */
+  .theme-ocean .red { background: #0d47a1; }   .theme-ocean .green { background: #4dd0e1; }
+  .theme-sunset .red { background: #6a1b9a; }  .theme-sunset .green { background: #ffb74d; }
+  .theme-mono .red { background: #151515; }    .theme-mono .green { background: #e6e6e6; }
+  .theme-candy .red { background: #ec407a; }   .theme-candy .green { background: #b2f5dc; }
+  .theme-lime .red { background: #33691e; }    .theme-lime .green { background: #c5e1a5; }
+  .theme-grape .red { background: #4a148c; }   .theme-grape .green { background: #e1bee7; }
+  .theme-ember .red { background: #bf360c; }   .theme-ember .green { background: #ffe0b2; }
+  .theme-slate .red { background: #263238; }   .theme-slate .green { background: #90a4ae; }
+
+  /* Medium */
+  .theme-marble .red {
+    background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.28) 42%, transparent 45%),
+                linear-gradient(135deg, #2b2b2b, #4a4a4a 30%, #1e1e1e 55%, #3a3a3a);
+  }
+  .theme-marble .green {
+    background: linear-gradient(120deg, transparent 38%, rgba(0,0,0,0.18) 40%, transparent 43%),
+                linear-gradient(135deg, #f5f5f5, #e0e0e0 40%, #fafafa 60%, #d6d6d6);
+  }
+
+  .theme-circuit .red {
+    background: radial-gradient(circle at 50% 50%, #ffeb3b 0 12%, transparent 13%),
+                linear-gradient(90deg, transparent 46%, #c8a032 46% 54%, transparent 54%),
+                linear-gradient(0deg, transparent 46%, #c8a032 46% 54%, transparent 54%), #0b3d1f;
+    box-shadow: 0 0 8px #ffeb3b66 !important;
+  }
+  .theme-circuit .green { background: linear-gradient(90deg, transparent 47%, #1f6b3a 47% 53%, transparent 53%), #0e4d27; }
+  #board.theme-circuit, .themeItem .mini.theme-circuit { background: #062814; }
+  #board.theme-circuit { padding: 10px; border-radius: 10px; }
+
+  .theme-denim .red { background: repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 4px), #8d2b2b; border: 2px dashed #e0a96d; }
+  .theme-denim .green { background: repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 4px), #3b5b8c; border: 2px dashed #e0c08d; }
+  .mini.theme-denim div { border-width: 1px; }
+
+  .theme-checker .red { background: conic-gradient(#e53935 25%, #b71c1c 0 50%, #e53935 0 75%, #b71c1c 0) 0 0 / 50% 50%; }
+  .theme-checker .green { background: conic-gradient(#e8f5e9 25%, #a5d6a7 0 50%, #e8f5e9 0 75%, #a5d6a7 0) 0 0 / 50% 50%; }
+
+  .theme-ice .red { background: linear-gradient(135deg, rgba(255,255,255,0.55), transparent 45%), linear-gradient(160deg, #4fc3f7, #0277bd); box-shadow: inset 0 0 0 1px #e1f5fe88 !important; }
+  .theme-ice .green { background: linear-gradient(135deg, rgba(255,255,255,0.7), transparent 50%), linear-gradient(160deg, #f1f8fe, #cfe8f7); }
+  #board.theme-ice, .themeItem .mini.theme-ice { background: #0d2233; }
+  #board.theme-ice { padding: 10px; border-radius: 12px; }
+
+  .theme-retro .red { background: #0f380f; }   .theme-retro .green { background: #9bbc0f; }
+  .theme-retro div { border-radius: 0 !important; box-shadow: inset -3px -3px 0 rgba(0,0,0,0.25) !important; }
+  #board.theme-retro { background: #8bac0f; padding: 10px; border: 6px solid #306230; border-radius: 4px; }
+  .themeItem .mini.theme-retro { background: #306230; }
+
+  .theme-forest .red { background: radial-gradient(circle at 35% 30%, #a1887f, #5d4037 55%, #3e2723); }
+  .theme-forest .green { background: linear-gradient(135deg, #81c784, #2e7d32); border-radius: 0 60% 0 60% !important; }
+  #board.theme-forest { background: #1b2a1b; padding: 10px; border-radius: 12px; }
+
+  .theme-bubble .red, .theme-bubble .green { border-radius: 50% !important; }
+  .theme-bubble .red { background: radial-gradient(circle at 30% 28%, #fff 0 8%, #ff8a80 22%, #e5736b); }
+  .theme-bubble .green { background: radial-gradient(circle at 30% 28%, #fff 0 8%, #b9f6ca 22%, #8fdcaa); }
+
+  /* Legendary */
+  .theme-galaxy .red {
+    background:
+      radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 70% 60%, #fff, transparent),
+      radial-gradient(1px 1px at 40% 80%, #fff, transparent),
+      linear-gradient(135deg, #7b1fa2, #e040fb, #3f51b5, #00bcd4, #7b1fa2);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 400% 400%;
+    animation: flow 7s ease infinite; box-shadow: 0 0 12px #e040fb88 !important;
+  }
+  .theme-galaxy .green {
+    background: radial-gradient(1px 1px at 25% 25%, #fff9, transparent),
+                radial-gradient(1px 1px at 75% 70%, #fff7, transparent), #0b0b26;
+    animation: twinkle 3s ease-in-out infinite;
+  }
+  #board.theme-galaxy, .themeItem .mini.theme-galaxy { background: radial-gradient(ellipse at center, #1a1040, #05050f); }
+  #board.theme-galaxy { padding: 12px; border-radius: 14px; }
+
+  .theme-lava .red {
+    background: linear-gradient(45deg, #d50000, #ff6d00, #ffab00, #ff3d00, #d50000);
+    background-size: 300% 300%; animation: flow 3s ease infinite; box-shadow: 0 0 14px #ff6d00aa !important;
+  }
+  .theme-lava .green { background: linear-gradient(135deg, #2b2b2b, #111 60%, #3a1a0a); }
+  #board.theme-lava, .themeItem .mini.theme-lava { background: #1a0a05; }
+  #board.theme-lava { padding: 12px; border-radius: 14px; box-shadow: inset 0 0 30px #ff3d0055; }
+
+  .theme-holo .red {
+    background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede, #b2ff59, #ff6ec4);
+    background-size: 300% 300%; animation: flow 4s linear infinite;
+  }
+  .theme-holo .green { background: linear-gradient(135deg, #e0e0e0, #fafafa 40%, #cfd8dc 60%, #eceff1); }
+  #board.theme-holo { padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #2a2440, #1e2a3a); }
+
+  .theme-royal .red {
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.75) 50%, transparent 70%),
+                linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+    background-size: 200% 100%, 100% 100%; animation: shimmer 2.5s linear infinite;
+    box-shadow: 0 0 10px #fcf6ba66 !important;
+  }
+  .theme-royal .green { background: linear-gradient(135deg, #1c1c1c, #2e2e2e 40%, #111 60%, #262626); box-shadow: inset 0 0 0 2px #b38728 !important; }
+  #board.theme-royal, .themeItem .mini.theme-royal { background: #0d0d0d; }
+  #board.theme-royal { padding: 12px; border-radius: 14px; border: 3px solid #b38728; }
+
+  .theme-neon .red { background: #ff2bd6; box-shadow: 0 0 10px #ff2bd6, 0 0 22px #ff2bd6aa !important; }
+  .theme-neon .green { background: #071c1f; box-shadow: inset 0 0 0 2px #00ffd5, 0 0 8px #00ffd555 !important; }
+  #board.theme-neon, .themeItem .mini.theme-neon { background: #0a0014; }
+  #board.theme-neon { padding: 12px; border-radius: 12px; }
+
+  .theme-aurora .red {
+    background: linear-gradient(120deg, #00e676, #1de9b6, #7c4dff, #e040fb, #00e676);
+    background-size: 300% 300%; animation: flow 6s ease infinite; box-shadow: 0 0 12px #1de9b688 !important;
+  }
+  .theme-aurora .green { background: linear-gradient(180deg, #0f2238, #06121f); }
+  #board.theme-aurora, .themeItem .mini.theme-aurora { background: linear-gradient(180deg, #0a1a2f, #020a14); }
+  #board.theme-aurora { padding: 12px; border-radius: 14px; }
+
+  @keyframes pulse { 50% { filter: brightness(1.4) saturate(1.3); } }
+  .theme-plasma .red {
+    background: radial-gradient(circle at 50% 50%, #fff 0 6%, #ff4dff 18%, #7b2ff7 45%, #2b0a5a 75%);
+    animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 0 14px #ff4dff99 !important;
+  }
+  .theme-plasma .green { background: radial-gradient(circle at 50% 50%, #1b1035, #0d0820); }
+  #board.theme-plasma, .themeItem .mini.theme-plasma { background: #07041a; }
+  #board.theme-plasma { padding: 12px; border-radius: 14px; }
+
+  @keyframes rain { to { background-position: 0 40px, 0 0; } }
+  .theme-matrix .red {
+    background: repeating-linear-gradient(180deg, rgba(0,255,70,0.9) 0 3px, rgba(0,255,70,0.15) 3px 8px), #001a06;
+    background-size: 100% 40px, 100% 100%; animation: rain 1.2s linear infinite;
+    box-shadow: 0 0 10px #00ff4688 !important;
+  }
+  .theme-matrix .green { background: #000d03; box-shadow: inset 0 0 0 1px #00ff4633 !important; }
+  #board.theme-matrix, .themeItem .mini.theme-matrix { background: #000; }
+  #board.theme-matrix { padding: 12px; border-radius: 10px; }
+</style>
+</head>
+<body>
+  <!-- Shop: slides over the page, open by default -->
+  <aside id="shop" class="hidden">
+    <button id="shopToggle" title="Show / hide the shop"><i class="ti ti-chevron-left" id="shopChevron"></i>Shop</button>
+    <div class="head">
+      <h2>Shop</h2>
+      <div id="shopStars"><i class="ti ti-star"></i><span id="myPoints">0</span> stars</div>
+      <div id="shopBest"></div>
+      <div class="howto">
+        Earn stars each race: 1st +10, 2nd +5, everyone else +1.<br>
+        Unlock tiers by solving a board fast: Basic under 25s, Medium under 15s, Legendary under 5s.
+        Stars, unlocks and bought themes reset in each new lobby.
+      </div>
+      <div id="shopError" class="error"></div>
+    </div>
+    <label class="toggle shopOption"><input type="checkbox" id="dotsToggle"> Show red/green dots on squares</label>
+    <div id="themeList"></div>
+  </aside>
+
+  <h1>Flip Race</h1>
+
+  <!-- Join -->
+  <div id="joinScreen" class="panel hidden">
+    <label for="nameInput">Your name</label>
+    <input id="nameInput" maxlength="20" placeholder="Enter a name" autocomplete="nickname">
+    <label for="roomInput">Room code (leave blank to create a new room)</label>
+    <input id="roomInput" maxlength="6" placeholder="e.g. KQZD">
+    <button id="joinBtn" class="primary">Join / Create room</button>
+    <div id="joinError" class="error"></div>
+    <p class="muted" style="font-size:13px;margin:0">
+      Click a square to flip it and its neighbours above, below, left and right.
+      Striped squares are blocked. First to clear the whole board wins.
+    </p>
+  </div>
+
+  <!-- Game -->
+  <div id="gameScreen" class="hidden">
+    <div id="topBar" class="panel">
+      <div>Room <span id="roomCode"></span><span id="pointsBadge"></span></div>
+      <div style="display:flex;gap:8px">
+        <button id="copyBtn"><i class="ti ti-link"></i><span>Copy invite link</span></button>
+        <button id="leaveBtn"><i class="ti ti-logout"></i>Leave</button>
+      </div>
+    </div>
+
+    <div id="layout">
+      <div id="playArea" class="panel">
+        <div id="hostControls">
+          <label for="sizeSelect" class="muted">Grid</label>
+          <select id="sizeSelect"></select>
+          <label for="obstacleSelect" class="muted">Obstacles</label>
+          <select id="obstacleSelect"></select>
+          <button id="startBtn" class="primary"><i class="ti ti-player-play"></i><span>Start race</span></button>
+        </div>
+        <div id="waitingHost" class="muted"></div>
+        <div id="timer"></div>
+        <div id="board"></div>
+        <div id="boardMsg"></div>
+        <div id="solverPanel" class="hidden">
+          <div id="solverMini" class="mini"></div>
+          <div id="solverText"></div>
+        </div>
+      </div>
+
+      <div id="side">
+        <div class="panel">
+          <h3>Players</h3>
+          <div id="players"></div>
+        </div>
+
+        <div id="resultsPanel" class="panel hidden">
+          <h3 id="resultsTitle">Results</h3>
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th class="num">Time</th><th class="num">Clicks</th><th class="num">Stars</th></tr></thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+          <div id="optimalRow" class="hidden">
+            <div id="optimalMini" class="mini"></div>
+            <div id="optimalText"></div>
+          </div>
+        </div>
+
+        <details id="profilePanel" class="panel" open>
+          <summary><i class="ti ti-user"></i> Your profile</summary>
+          <div style="margin-top:12px">
+            <div id="profileStats"></div>
+            <div class="muted" style="font-size:13px;margin-bottom:6px">Best time per grid size (and the board it was on)</div>
+            <div id="profileBests"></div>
+          </div>
+        </details>
+
+        <details id="historyPanel" class="panel hidden">
+          <summary>Past rounds</summary>
+          <div id="historyBody"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;   // textContent everywhere: names are user input
+    return e;
+  };
+  const icon = (name, cls = '') => el('i', `ti ti-${name}` + (cls ? ' ' + cls : ''));
+  // Build an inline element from a mix of strings and nodes
+  const line = (cls, ...parts) => {
+    const s = el('span', cls);
+    parts.forEach(p => s.append(p));
+    return s;
+  };
+  const fmt = ms => (ms / 1000).toFixed(2) + 's';
+  const clicksText = n => `${n} click${n === 1 ? '' : 's'}`;
+
+  const SOLVER_DELAY_MS = 30000;   // solver appears for anyone still racing after this long
+  const OBSTACLE_CHOICES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25];
+  const maxObstacles = n => Math.floor(n * n / 4);   // must match the server
+
+  // Theme looks live in the CSS above; tiers, prices and unlock times come from the server.
+  const THEMES = [
+    { id: 'classic', name: 'Classic', desc: 'Red and green' },
+    { id: 'ocean',   name: 'Ocean',   desc: 'Deep sea and shallows' },
+    { id: 'sunset',  name: 'Sunset',  desc: 'Purple dusk, orange glow' },
+    { id: 'mono',    name: 'Mono',    desc: 'Plain black and white' },
+    { id: 'candy',   name: 'Candy',   desc: 'Bubblegum and mint' },
+    { id: 'lime',    name: 'Lime',    desc: 'Dark leaf and pale lime' },
+    { id: 'grape',   name: 'Grape',   desc: 'Deep violet and lilac' },
+    { id: 'ember',   name: 'Ember',   desc: 'Burnt orange and cream' },
+    { id: 'slate',   name: 'Slate',   desc: 'Charcoal and blue-grey' },
+    { id: 'retro',   name: 'Retro',   desc: 'Old handheld pixel screen' },
+    { id: 'forest',  name: 'Forest',  desc: 'Tree bark and leaves' },
+    { id: 'bubble',  name: 'Bubble',  desc: 'Shiny round bubbles' },
+    { id: 'marble',  name: 'Marble',  desc: 'Veined black and white stone' },
+    { id: 'circuit', name: 'Circuit', desc: 'Glowing circuit board traces' },
+    { id: 'denim',   name: 'Denim',   desc: 'Stitched fabric patches' },
+    { id: 'checker', name: 'Checker', desc: 'Checkered tiles' },
+    { id: 'ice',     name: 'Ice',     desc: 'Frosted glass with a shine' },
+    { id: 'galaxy',  name: 'Galaxy',  desc: 'Animated nebula and starfield' },
+    { id: 'lava',    name: 'Lava',    desc: 'Flowing molten lava' },
+    { id: 'holo',    name: 'Holo',    desc: 'Shifting holographic rainbow' },
+    { id: 'royal',   name: 'Royal',   desc: 'Shimmering gold on obsidian' },
+    { id: 'neon',    name: 'Neon',    desc: 'Glowing pink and cyan' },
+    { id: 'aurora',  name: 'Aurora',  desc: 'Drifting northern lights' },
+    { id: 'plasma',  name: 'Plasma',  desc: 'Pulsing electric orbs' },
+    { id: 'matrix',  name: 'Matrix',  desc: 'Falling green code' }
+  ];
+  const TIER_ORDER = ['free', 'basic', 'medium', 'legendary'];
+  const TIER_LABEL = { free: 'Free', basic: 'Basic', medium: 'Medium', legendary: 'Legendary' };
+
+  let me = null;           // { token, id, room, name }
+  let S = null;            // latest room state from server
+  let Y = null;            // my own profile (server-verified view)
+  let pollGen = 0;         // bumping this stops the current poll loop
+  let clockOffset = null;  // serverTime - localTime
+  // My own board is kept locally so clicks feel instant. Clicks only XOR, so the
+  // order they reach the server doesn't matter and both sides end up identical.
+  let local = { roundId: null, n: 3, base: [], baseClicks: 0, moves: [], board: [], blocked: [], clicks: 0 };
+  let hostChoice = { size: null, obstacles: null };   // host's dropdown picks
+
+  const serverNow = () => Date.now() + (clockOffset || 0);
+  const myPlayer = () => S && me && S.players.find(p => p.id === me.id);
+  const tierOf = theme => (S && S.themeTiers[theme]) || 'free';
+  const tierUnlocked = tier => myPlayer().unlocked.includes(tier);
+
+  // Quality badge: tier name plus 4 bars (1 = Free ... 4 = Legendary)
+  function tierBadge(tier) {
+    const b = el('span', 'tier-badge tier-' + tier);
+    const q = el('span', 'q');
+    const level = TIER_ORDER.indexOf(tier) + 1;
+    for (let k = 1; k <= 4; k++) q.appendChild(el('span', k <= level ? 'on' : ''));
+    b.append(q, TIER_LABEL[tier]);
+    b.title = `${TIER_LABEL[tier]} quality theme`;
+    return b;
+  }
+
+  // ---------------------------------------------------------------- game logic (same as server)
+  function flipCells(n, i, blocked) {
+    const r = Math.floor(i / n), c = i % n, out = [i];
+    if (r > 0) out.push(i - n);
+    if (r < n - 1) out.push(i + n);
+    if (c > 0) out.push(i - 1);
+    if (c < n - 1) out.push(i + 1);
+    return blocked ? out.filter(j => !blocked[j]) : out;
+  }
+
+  // Fewest clicks to clear the board (Gaussian elimination over GF(2), then try every
+  // alternative solution for sizes that have several). Blocked squares can't be clicked.
+  function minSolution(n, board, blocked) {
+    const N = n * n, AUG = 1n << BigInt(N), rows = [];
+    const pop = v => { let c = 0; while (v) { c += Number(v & 1n); v >>= 1n; } return c; };
+    for (let i = 0; i < N; i++) {
+      let m = 0n;
+      if (blocked[i]) m = 1n << BigInt(i);
+      else {
+        for (const j of flipCells(n, i, blocked)) m |= 1n << BigInt(j);
+        if (board[i]) m |= AUG;
+      }
+      rows.push(m);
+    }
+    const pivots = [];
+    let r = 0;
+    for (let c = 0; c < N && r < N; c++) {
+      const bit = 1n << BigInt(c);
+      let p = -1;
+      for (let k = r; k < N; k++) if (rows[k] & bit) { p = k; break; }
+      if (p < 0) continue;
+      [rows[r], rows[p]] = [rows[p], rows[r]];
+      for (let k = 0; k < N; k++) if (k !== r && (rows[k] & bit)) rows[k] ^= rows[r];
+      pivots.push(c);
+      r++;
+    }
+    for (let k = r; k < N; k++) if (rows[k] & AUG) return null;
+    const isPivot = new Set(pivots);
+    let best = 0n;
+    pivots.forEach((c, k) => { if (rows[k] & AUG) best |= 1n << BigInt(c); });
+    const basis = [];
+    for (let f = 0; f < N; f++) if (!isPivot.has(f)) {
+      let v = 1n << BigInt(f);
+      pivots.forEach((c, k) => { if (rows[k] & (1n << BigInt(f))) v |= 1n << BigInt(c); });
+      basis.push(v);
+    }
+    if (basis.length > 20) basis.length = 20;
+    let bestW = pop(best);
+    const base = best;
+    for (let m = 1; m < (1 << basis.length); m++) {
+      let v = base;
+      for (let k = 0; k < basis.length; k++) if (m >> k & 1) v ^= basis[k];
+      const w = pop(v);
+      if (w < bestW) { best = v; bestW = w; }
+    }
+    const clicks = [];
+    for (let i = 0; i < N; i++) if (best >> BigInt(i) & 1n) clicks.push(i);
+    return clicks;
+  }
+  let solverCache = { key: null, clicks: [] };
+
+  // ---------------------------------------------------------------- networking
+  async function api(action, body = {}) {
+    const res = await fetch('/api/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, token: me && me.token })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
+
+  function connect(m) {
+    me = m;
+    sessionStorage.setItem('flipMe', JSON.stringify(me));
+    history.replaceState(null, '', '?room=' + me.room);
+    clockOffset = null;
+    local.roundId = null;
+    pollLoop(++pollGen);
+  }
+
+  // Long-polling: the server answers as soon as anything changes (or after ~25s anyway).
+  async function pollLoop(gen) {
+    let version = -1, fails = 0;
+    while (gen === pollGen) {
+      try {
+        const res = await fetch(`/api/poll?token=${encodeURIComponent(me.token)}&v=${version}`, { cache: 'no-store' });
+        if (gen !== pollGen) return;
+        if (res.status === 404) return leaveLocal('Lost your spot in the room (the server may have restarted). Please join again.');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (gen !== pollGen) return;
+        fails = 0;
+        version = data.state.version;
+        S = data.state;
+        Y = data.you.profile;
+        // Save the sealed profile in this browser; the server can open it next time we join
+        localStorage.setItem('flipProfile', data.you.blob);
+        onState();
+      } catch {
+        fails++;
+        await new Promise(r => setTimeout(r, Math.min(5000, 500 * fails)));
+      }
+    }
+  }
+
+  function leaveLocal(msg) {
+    pollGen++;
+    S = null; me = null;
+    sessionStorage.removeItem('flipMe');
+    showJoin(msg);
+  }
+
+  // ---------------------------------------------------------------- screens
+  function showJoin(msg = '') {
+    $('gameScreen').classList.add('hidden');
+    $('shop').classList.add('hidden');
+    $('joinScreen').classList.remove('hidden');
+    $('joinError').textContent = msg;
+    $('roomInput').value = new URLSearchParams(location.search).get('room') || '';
+    $('nameInput').value = localStorage.getItem('flipName') || '';
+    $('nameInput').focus();
+  }
+
+  async function join() {
+    const name = $('nameInput').value.trim();
+    if (!name) { $('joinError').textContent = 'Please enter a name.'; return; }
+    localStorage.setItem('flipName', name);
+    $('joinBtn').disabled = true;
+    $('joinError').textContent = '';
+    try {
+      me = null;
+      connect(await api('join', {
+        name, room: $('roomInput').value.trim(),
+        profile: localStorage.getItem('flipProfile') || undefined
+      }));
+    } catch (err) {
+      $('joinError').textContent = err.message === 'Failed to fetch' ? "Can't reach the server." : err.message;
+    } finally {
+      $('joinBtn').disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------- state
+  function onState() {
+    const off = S.serverNow - Date.now();
+    clockOffset = clockOffset === null ? off : Math.max(clockOffset, off);
+
+    const mine = myPlayer();
+    if (!mine) return leaveLocal('You were removed from the room.');
+
+    if ($('gameScreen').classList.contains('hidden')) {
+      $('joinScreen').classList.add('hidden');
+      $('gameScreen').classList.remove('hidden');
+      $('shop').classList.remove('hidden');
+      setShopOpen(localStorage.getItem('flipShopOpen') !== '0');   // open by default
+    }
+
+    if (S.round && S.round.id !== local.roundId) {
+      const n = S.round.size;
+      const blocked = new Array(n * n).fill(false);
+      S.round.blocked.forEach(i => blocked[i] = true);
+      local = { roundId: S.round.id, n, blocked, moves: [], board: [], clicks: 0 };
+      resyncFromServer(mine);
+      buildBoard();
+    } else if (S.round && local.roundId === S.round.id) {
+      reconcile(mine);
+    }
+    render();
+  }
+
+  // ---------------------------------------------------------------- my board (optimistic)
+  // My board = the server-confirmed "base" + every click that wasn't rejected. Clicks only
+  // flip squares, so their order doesn't matter: a rejected click is simply dropped and
+  // can never wipe out another click that the server did accept.
+  function resyncFromServer(mine) {
+    local.base = [...mine.board].map(Number);
+    local.baseClicks = mine.clicks;
+    local.moves = [];
+    recompute();
+  }
+
+  function recompute() {
+    const b = [...local.base];
+    let clicks = local.baseClicks;
+    for (const m of local.moves) {
+      if (m.status === 'rejected') continue;
+      flipCells(local.n, m.cell, local.blocked).forEach(j => b[j] ^= 1);
+      clicks++;
+    }
+    local.board = b;
+    local.clicks = clicks;
+  }
+
+  // Safety net: once the server has processed exactly as many clicks as I've made,
+  // our boards must match. If they don't, trust the server.
+  function reconcile(mine) {
+    if (local.moves.some(m => m.status === 'pending')) return;
+    const serverBoard = mine.board;
+    const mineStr = local.board.join('');
+    if (serverBoard === mineStr) return;
+    if (mine.clicks === local.clicks || mine.finishMs !== null) resyncFromServer(mine);
+  }
+
+  // ---------------------------------------------------------------- board
+  function buildBoard() {
+    const b = $('board');
+    b.innerHTML = '';
+    b.style.gridTemplateColumns = `repeat(${local.n}, 1fr)`;
+    b.style.gap = local.n <= 5 ? '6px' : local.n <= 7 ? '4px' : '3px';
+    b.classList.toggle('small', local.n > 6);
+    for (let i = 0; i < local.n * local.n; i++) {
+      const c = el('div', 'cell');
+      c.addEventListener('pointerdown', e => { e.preventDefault(); clickCell(i); });
+      b.appendChild(c);
+    }
+  }
+
+  const localSolved = () => local.board.length && local.board.every(v => v === 0);
+
+  function canClick() {
+    const mine = myPlayer();
+    return S && S.round && local.roundId === S.round.id && S.round.status !== 'finished' &&
+      serverNow() >= S.round.startAt && mine && mine.finishMs === null && !localSolved();
+  }
+
+  function clickCell(i) {
+    if (!canClick() || local.blocked[i]) return;
+    const move = { cell: i, status: 'pending' };
+    const roundId = local.roundId;
+    local.moves.push(move);
+    recompute();
+    render();
+    api('click', { cell: i, roundId })
+      .then(() => { move.status = 'ok'; })
+      .catch(() => { move.status = 'rejected'; })
+      .finally(() => {
+        if (local.roundId !== roundId) return;
+        recompute();
+        const mine = myPlayer();
+        if (mine) reconcile(mine);
+        render();
+      });
+  }
+
+  function setTheme(node, theme) {
+    [...node.classList].filter(c => c.startsWith('theme-')).forEach(c => node.classList.remove(c));
+    if (theme && theme !== 'classic') node.classList.add('theme-' + theme);
+  }
+
+  // Small board picture. boardStr: '1' = red, '0' = green. blocked: list of indices.
+  function miniGrid(boardStr, n, { outline = [], theme = 'classic', blocked = [] } = {}) {
+    const g = el('div', 'mini');
+    g.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    setTheme(g, theme);
+    const sol = new Set(outline), blk = new Set(blocked);
+    [...boardStr].forEach((v, i) => {
+      const d = el('div', blk.has(i) ? 'blocked' : v === '1' ? 'red' : 'green');
+      if (sol.has(i)) d.classList.add('sol');
+      g.appendChild(d);
+    });
+    return g;
+  }
+
+  // ---------------------------------------------------------------- rendering
+  function render() {
+    if (!S) return;
+    const isHost = S.hostId === me.id;
+    const round = S.round;
+    const host = S.players.find(p => p.id === S.hostId);
+    const mine = myPlayer();
+    $('roomCode').textContent = S.code;
+    $('pointsBadge').replaceChildren(icon('star'), ` ${mine.points}`);
+
+    // Host controls
+    $('hostControls').classList.toggle('hidden', !isHost);
+    renderHostControls();
+    const waiting = !round || round.status === 'finished';
+    $('waitingHost').textContent = isHost || !waiting ? '' :
+      `Waiting for ${host ? host.name : 'the host'} to start the ${round ? 'next' : 'first'} race…`;
+    $('startBtn').querySelector('span').textContent = round ? 'New race' : 'Start race';
+
+    // Board
+    const b = $('board');
+    const counting = round && serverNow() < round.startAt;
+    b.classList.toggle('hidden', !round);
+    b.classList.toggle('hidden-board', !!counting);
+    b.classList.toggle('locked', !canClick());
+    setTheme(b, mine.theme);
+    if (round) [...b.children].forEach((c, i) =>
+      c.className = 'cell ' + (local.blocked[i] ? 'blocked' : local.board[i] ? 'red' : 'green'));
+    $('boardMsg').textContent = !round ? '' :
+      counting ? 'Get ready…' : clicksText(local.clicks);
+
+    renderSolver();
+    renderPlayers();
+    renderResults();
+    renderHistory();
+    renderShop();
+    renderProfile();
+    tick();
+  }
+
+  let profileKey = null;
+  function renderProfile() {
+    const key = JSON.stringify(Y);
+    if (key === profileKey) return;
+    profileKey = key;
+    const winRate = Y.races ? Math.round(100 * Y.wins / Y.races) + '%' : '–';
+    const avg = (total, n, f) => n ? f(total / n) : '–';
+    const stats = [
+      ['Wins', Y.wins, 'win'], ['Losses', Y.losses, 'loss'], ['Win rate', winRate],
+      ['Races', Y.races], ['2nd places', Y.seconds], ['Win streak', `${Y.streak} (best ${Y.bestStreak})`],
+      ['Solves', Y.solves], ['Perfect solves', Y.perfectSolves], ['Avg solve', avg(Y.totalSolveMs, Y.solves, fmt)],
+      ['Avg clicks', avg(Y.totalClicks, Y.solves, v => v.toFixed(1))],
+      ['Fastest', Y.bestMs !== null ? fmt(Y.bestMs) : '–'], ['Stars earned', Y.starsEarned]
+    ];
+    const box = $('profileStats');
+    box.innerHTML = '';
+    for (const [k, v, cls] of stats) {
+      const s = el('div', 'statBox' + (cls ? ' ' + cls : ''));
+      s.append(el('div', 'v', String(v)), el('div', 'k', k));
+      box.appendChild(s);
+    }
+    const bests = $('profileBests');
+    bests.innerHTML = '';
+    const sizes = Object.keys(Y.best).map(Number).sort((a, b) => a - b);
+    if (!sizes.length) bests.appendChild(el('div', 'muted', 'No solves yet. Finish a race to set a record.'));
+    for (const n of sizes) {
+      const b = Y.best[n];
+      const row = el('div', 'bestRow');
+      row.appendChild(el('span', 'size', `${n}×${n}`));
+      row.appendChild(miniGrid(b.board, n, { theme: myPlayer().theme, blocked: b.blocked }));
+      row.appendChild(el('span', 'time', fmt(b.ms)));
+      row.appendChild(el('span', 'when',
+        (b.obstacles ? `${b.obstacles} obstacles · ` : '') + new Date(b.at).toLocaleDateString()));
+      bests.appendChild(row);
+    }
+  }
+
+  function renderHostControls() {
+    const sizeSel = $('sizeSelect'), obsSel = $('obstacleSelect');
+    if (!sizeSel.options.length)
+      for (let n = S.minSize; n <= S.maxSize; n++) sizeSel.appendChild(new Option(`${n} × ${n}`, n));
+    const size = hostChoice.size ?? S.size;
+    sizeSel.value = size;
+    // Obstacle choices depend on the grid size (at most a quarter of the squares)
+    const max = maxObstacles(size);
+    const choices = OBSTACLE_CHOICES.filter(k => k <= max);
+    const want = Math.min(hostChoice.obstacles ?? S.obstacles, max);
+    const key = choices.join(',');
+    if (obsSel.dataset.key !== key) {
+      obsSel.innerHTML = '';
+      choices.forEach(k => obsSel.appendChild(new Option(k === 0 ? 'None' : String(k), k)));
+      obsSel.dataset.key = key;
+    }
+    obsSel.value = choices.includes(want) ? want : choices.filter(k => k <= want).pop();
+  }
+
+  function renderPlayers() {
+    const box = $('players');
+    box.innerHTML = '';
+    const round = S.round;
+    const sorted = [...S.players].sort((a, b) =>
+      (a.finishMs ?? Infinity) - (b.finishMs ?? Infinity) || b.wins - a.wins || a.name.localeCompare(b.name));
+    for (const p of sorted) {
+      const row = el('div', 'player' + (p.id === me.id ? ' me' : '') + (p.online ? '' : ' offline'));
+      // Everyone's mini board is shown in their own theme
+      const live = round && p.board;
+      row.appendChild(miniGrid(live ? p.board : '101010101', live ? round.size : 3,
+        { theme: p.theme, blocked: live ? round.blocked : [] }));
+
+      const info = el('div', 'info');
+      const name = el('div', 'name');
+      if (p.id === S.hostId) name.append(icon('crown'), ' ');
+      name.append(p.name + (p.id === me.id ? ' (you)' : '') + (p.online ? '' : ' (offline)'));
+      info.appendChild(name);
+
+      let stat = 'In lobby', fin = false;
+      if (round) {
+        if (p.finishMs !== null) {
+          stat = line('', icon('check'), ` ${fmt(p.finishMs)} · ${clicksText(p.clicks)}`);
+          if (round.winnerId === p.id) stat.append(' ', icon('trophy'));
+          fin = true;
+        } else if (serverNow() < round.startAt) stat = 'Ready';
+        else if (round.status === 'finished') stat = 'Did not finish';
+        else {
+          const left = [...p.board].filter(v => v === '1').length;
+          // Live race clock for this player (updated every frame in tick())
+          stat = line('', icon('clock'), ' ', el('span', 'liveTime', fmt(serverNow() - round.startAt)),
+            ` · ${clicksText(p.clicks)} · ${left} left`);
+        }
+      }
+      const statEl = el('div', 'stat' + (fin ? ' fin' : ''));
+      statEl.append(stat);
+      info.appendChild(statEl);
+
+      // Theme quality + best time
+      const meta = el('div', 'meta');
+      meta.appendChild(tierBadge(tierOf(p.theme)));
+      meta.appendChild(line('', icon('clock'), p.bestMs !== null ? ` best ${fmt(p.bestMs)}` : ' no solve yet'));
+      info.appendChild(meta);
+      row.appendChild(info);
+
+      const side = el('div', 'wins');
+      const record = line('', icon('trophy'), ` ${p.careerWins}W ${p.careerLosses}L`);
+      record.title = 'Career wins / losses';
+      side.appendChild(record);
+      side.appendChild(line('star', icon('star'), ` ${p.points}`));
+      row.appendChild(side);
+      box.appendChild(row);
+    }
+  }
+
+  const solverOpen = () => {
+    const round = S && S.round, mine = myPlayer();
+    return !!(round && round.status !== 'finished' && mine && mine.finishMs === null &&
+      !localSolved() && serverNow() - round.startAt >= SOLVER_DELAY_MS);
+  };
+
+  // After 30s of racing: show my current board with the squares to click outlined.
+  function renderSolver() {
+    const open = solverOpen();
+    $('solverPanel').classList.toggle('hidden', !open);
+    if (!open) return;
+    const key = local.roundId + ':' + local.board.join('');
+    if (solverCache.key !== key)
+      solverCache = { key, clicks: minSolution(local.n, local.board, local.blocked) || [] };
+    const mini = miniGrid(local.board.join(''), local.n,
+      { outline: solverCache.clicks, theme: myPlayer().theme, blocked: S.round.blocked });
+    mini.id = 'solverMini';
+    $('solverMini').replaceWith(mini);
+    const k = solverCache.clicks.length;
+    $('solverText').innerHTML =
+      `<i class="ti ti-bulb"></i> <b>Solver</b>: click the <b>${k}</b> outlined square${k === 1 ? '' : 's'} on your board, in any order. ` +
+      `It updates as you click.`;
+  }
+
+  function placeCell(k, done) {
+    if (!done) return '–';
+    if (k < 3) return line(`place p${k + 1}`, icon('medal'), String(k + 1));
+    return String(k + 1);
+  }
+
+  function renderResults() {
+    const round = S.round;
+    const show = round && (round.status === 'finished' || S.players.some(p => p.finishMs !== null));
+    $('resultsPanel').classList.toggle('hidden', !show);
+    if (!show) return;
+    $('resultsTitle').textContent = round.status === 'finished' ? `Round ${round.id} results` : `Round ${round.id} — live`;
+    const body = $('resultsBody');
+    body.innerHTML = '';
+    const sorted = [...S.players].sort((a, b) => (a.finishMs ?? Infinity) - (b.finishMs ?? Infinity));
+    sorted.forEach((p, k) => {
+      const done = p.finishMs !== null;
+      const tr = el('tr', p.id === me.id ? 'me' : '');
+      const place = el('td');
+      place.append(placeCell(k, done));
+      tr.appendChild(place);
+      tr.appendChild(el('td', '', p.name));
+      tr.appendChild(el('td', 'num', done ? fmt(p.finishMs) : round.status === 'finished' ? 'DNF' : 'racing…'));
+      tr.appendChild(el('td', 'num', String(p.clicks)));
+      const pts = round.awards && round.awards[p.id] !== undefined ? round.awards[p.id] : null;
+      tr.appendChild(el('td', 'num pts', pts === null ? '' : `+${pts}`));
+      body.appendChild(tr);
+    });
+    const opt = round.status === 'finished' && round.optimal !== null;
+    $('optimalRow').classList.toggle('hidden', !opt);
+    if (opt) {
+      const mini = miniGrid(round.board, round.size,
+        { outline: round.solution, theme: myPlayer().theme, blocked: round.blocked });
+      mini.id = 'optimalMini';
+      $('optimalMini').replaceWith(mini);
+      $('optimalText').textContent =
+        `Fewest possible: ${round.optimal} clicks (outlined squares on the starting board).`;
+    }
+  }
+
+  function renderHistory() {
+    const past = S.history.filter(h => !(S.round && h.round === S.round.id));
+    $('historyPanel').classList.toggle('hidden', !past.length);
+    const body = $('historyBody');
+    body.innerHTML = '';
+    for (const h of past) {
+      const d = el('div', 'pastRound');
+      d.appendChild(el('div', '', `Round ${h.round} · ${h.size}×${h.size}` +
+        (h.obstacles ? ` · ${h.obstacles} obstacles` : '') + ` · best possible ${h.optimal} clicks`));
+      const ol = el('ol');
+      for (const r of h.results)
+        ol.appendChild(el('li', '', `${r.name} — ${r.ms !== null ? fmt(r.ms) : 'DNF'} (${clicksText(r.clicks)})` +
+          (r.pts ? ` · +${r.pts} stars` : '')));
+      d.appendChild(ol);
+      body.appendChild(d);
+    }
+  }
+
+  // ---------------------------------------------------------------- shop
+  function setShopOpen(open) {
+    $('shop').classList.toggle('collapsed', !open);
+    $('shopChevron').className = 'ti ' + (open ? 'ti-chevron-left' : 'ti-chevron-right');
+    localStorage.setItem('flipShopOpen', open ? '1' : '0');
+  }
+
+  let shopKey = null;
+  function renderShop() {
+    const mine = myPlayer();
+    $('myPoints').textContent = mine.points;
+    $('shopBest').textContent = mine.lobbyBestMs !== null ? `Best solve in this lobby: ${fmt(mine.lobbyBestMs)}` : 'No solves in this lobby yet';
+    const key = [mine.points, mine.theme, mine.owned.join(','), mine.unlocked.join(',')].join('|');
+    if (key === shopKey) return;   // only rebuild when something relevant changed
+    shopKey = key;
+    const list = $('themeList');
+    list.innerHTML = '';
+    const owned = new Set(mine.owned);
+    for (const tier of TIER_ORDER) {
+      const themes = THEMES.filter(t => S.themeTiers[t.id] === tier);
+      if (!themes.length) continue;
+      const { price, unlockMs } = S.tiers[tier];
+      const unlocked = tierUnlocked(tier);
+
+      const head = el('div', 'tierHead');
+      head.appendChild(tierBadge(tier));
+      if (unlockMs !== null) {
+        const u = el('span', 'unlock' + (unlocked ? ' ok' : ''));
+        u.append(icon(unlocked ? 'lock-open' : 'lock'),
+          unlocked ? ` Unlocked · ${price} stars each` : ` Solve under ${unlockMs / 1000}s · ${price} stars each`);
+        head.appendChild(u);
+      }
+      list.appendChild(head);
+
+      for (const t of themes) {
+        const item = el('div', 'themeItem' + (mine.theme === t.id ? ' equipped' : '') + (unlocked ? '' : ' locked'));
+        item.appendChild(miniGrid('101010101', 3, { theme: t.id }));
+        const info = el('div', 'tinfo');
+        info.appendChild(el('div', 'tname', t.name));
+        info.appendChild(el('div', 'tdesc', t.desc));
+        info.appendChild(tierBadge(tier));
+        item.appendChild(info);
+
+        let btn;
+        if (mine.theme === t.id) {
+          btn = el('button');
+          btn.append(icon('check'), 'Equipped');
+          btn.disabled = true;
+        } else if (owned.has(t.id) || price === 0) {
+          btn = el('button', '', 'Equip');
+          btn.addEventListener('click', () => shopAction('equip', t.id));
+        } else if (!unlocked) {
+          btn = el('button', 'buy');
+          btn.append(icon('lock'), `${unlockMs / 1000}s`);
+          btn.disabled = true;
+          btn.title = `Solve a board in under ${unlockMs / 1000}s to unlock`;
+        } else {
+          btn = el('button', 'buy');
+          btn.append(icon('star'), String(price));
+          if (mine.points < price) {
+            btn.disabled = true;
+            btn.title = `You need ${price - mine.points} more stars`;
+          } else {
+            btn.title = `Buy ${t.name} for ${price} stars`;
+            btn.addEventListener('click', () => shopAction('buy', t.id));
+          }
+        }
+        item.appendChild(btn);
+        list.appendChild(item);
+      }
+    }
+  }
+
+  async function shopAction(action, theme) {
+    $('shopError').textContent = '';
+    try { await api(action, { theme }); }
+    catch (err) { $('shopError').textContent = err.message; }
+  }
+
+  // ---------------------------------------------------------------- timer
+  let lastPhase = null;
+  function tick() {
+    const t = $('timer');
+    if (!S || !S.round) { t.textContent = ''; t.className = ''; return; }
+    const round = S.round, now = serverNow(), mine = myPlayer();
+    let phase;
+    if (now < round.startAt) {
+      phase = 'count';
+      t.className = 'countdown';
+      t.textContent = Math.ceil((round.startAt - now) / 1000);
+    } else if (mine && mine.finishMs !== null) {
+      phase = 'done';
+      if (t.dataset.phase !== 'done') {
+        t.className = 'done';
+        t.replaceChildren(icon('circle-check'), fmt(mine.finishMs));
+        if (round.winnerId === me.id) t.append(' — you win! ', icon('trophy'));
+      }
+    } else if (localSolved()) {
+      phase = 'solved';
+      t.className = 'done';
+      t.replaceChildren(icon('circle-check'), 'Finished!');
+    } else if (round.status === 'finished') {
+      phase = 'over';
+      t.className = '';
+      t.textContent = 'Round over';
+    } else {
+      const elapsed = now - round.startAt;
+      phase = elapsed >= SOLVER_DELAY_MS ? 'race-solver' : 'race';
+      t.className = '';
+      t.textContent = fmt(elapsed);
+      $('boardMsg').textContent = clicksText(local.clicks) + (elapsed < SOLVER_DELAY_MS
+        ? ` · solver appears in ${Math.ceil((SOLVER_DELAY_MS - elapsed) / 1000)}s` : '');
+    }
+    t.dataset.phase = phase;
+    // Keep other players' clocks running, even after I've finished
+    if (now >= round.startAt && round.status !== 'finished') {
+      const live = fmt(now - round.startAt);
+      document.querySelectorAll('#players .liveTime').forEach(s => { s.textContent = live; });
+    }
+    // Phase changed (countdown ended, solver unlocked...): re-render everything
+    if (phase !== lastPhase) { lastPhase = phase; render(); }
+  }
+  (function loop() { tick(); requestAnimationFrame(loop); })();
+
+  // ---------------------------------------------------------------- events
+  $('joinBtn').addEventListener('click', join);
+  ['nameInput', 'roomInput'].forEach(id =>
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') join(); }));
+  $('sizeSelect').addEventListener('change', () => {
+    hostChoice.size = Number($('sizeSelect').value);
+    render();
+  });
+  $('obstacleSelect').addEventListener('change', () => { hostChoice.obstacles = Number($('obstacleSelect').value); });
+  $('startBtn').addEventListener('click', () =>
+    api('start', { size: Number($('sizeSelect').value), obstacles: Number($('obstacleSelect').value) })
+      .catch(err => alert(err.message)));
+  $('leaveBtn').addEventListener('click', async () => {
+    try { await api('leave'); } catch {}
+    leaveLocal('');
+  });
+  $('copyBtn').addEventListener('click', async () => {
+    const link = `${location.origin}/?room=${S.code}`;
+    const label = $('copyBtn').querySelector('span');
+    try { await navigator.clipboard.writeText(link); label.textContent = 'Copied!'; }
+    catch { prompt('Copy this link:', link); }
+    setTimeout(() => label.textContent = 'Copy invite link', 1500);
+  });
+  $('shopToggle').addEventListener('click', () => setShopOpen($('shop').classList.contains('collapsed')));
+
+  // Status dots option (remembered in this browser)
+  const applyDots = on => {
+    $('dotsToggle').checked = on;
+    $('board').classList.toggle('dots', on);
+    localStorage.setItem('flipDots', on ? '1' : '0');
+  };
+  $('dotsToggle').addEventListener('change', () => applyDots($('dotsToggle').checked));
+  applyDots(localStorage.getItem('flipDots') === '1');
+
+  // Resume after a page refresh, otherwise show the join form
+  const saved = JSON.parse(sessionStorage.getItem('flipMe') || 'null');
+  if (saved) connect(saved); else showJoin();
+</script>
+</body>
+</html>

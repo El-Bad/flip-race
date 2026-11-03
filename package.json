@@ -1,0 +1,8 @@
+{
+  "name": "flip-race",
+  "version": "1.0.0",
+  "description": "Multiplayer race to turn a flip-grid all green",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "license": "MIT"
+}
