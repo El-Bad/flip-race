@@ -56,30 +56,30 @@
   #timer.countdown { color: var(--gold); font-size: 44px; }
   #timer.done { color: var(--gold); }
 
-  #board {
+  .board {
     display: grid; width: min(420px, 90vw); gap: 6px;
     user-select: none; touch-action: manipulation;
   }
-  #board .cell {
+  .board .cell {
     aspect-ratio: 1; border-radius: 10px; cursor: pointer;
     box-shadow: 0 3px 8px rgba(0,0,0,0.4); transition: background 0.12s, transform 0.08s;
   }
-  #board.small .cell { border-radius: 5px; }
-  #board .cell:active { transform: scale(0.94); }
-  #board.locked .cell { cursor: default; }
-  #board.hidden-board .cell { background: #444 !important; animation: none !important; box-shadow: none !important; }
-  #boardMsg { color: var(--muted); text-align: center; min-height: 20px; }
+  .board.small .cell { border-radius: 5px; }
+  .board .cell:active { transform: scale(0.94); }
+  .board.locked .cell { cursor: default; }
+  .board.hidden-board .cell { background: #444 !important; animation: none !important; box-shadow: none !important; }
+  .boardMsg { color: var(--muted); text-align: center; min-height: 20px; }
 
   /* Optional status dots: a plain red/green dot in each square, readable in any theme */
-  #board .cell { position: relative; }
-  #board.dots .cell.red::after, #board.dots .cell.green::after {
+  .board .cell { position: relative; }
+  .board.dots .cell.red::after, .board.dots .cell.green::after {
     content: ''; position: absolute; left: 50%; top: 50%; width: 11%; aspect-ratio: 1;
     transform: translate(-50%, -50%); border-radius: 50%; max-width: 14px; min-width: 6px;
     border: 1.5px solid rgba(255,255,255,0.9); box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
   }
-  #board.dots .cell.red::after { background: #e53935; }
-  #board.dots .cell.green::after { background: #43a047; }
-  #board.hidden-board .cell::after { display: none; }   /* don't reveal the board during the countdown */
+  .board.dots .cell.red::after { background: #e53935; }
+  .board.dots .cell.green::after { background: #43a047; }
+  .board.hidden-board .cell::after { display: none; }   /* don't reveal the board during the countdown */
   .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
   .shopOption { padding: 10px 16px; border-bottom: 1px solid #383844; color: #ddd; }
   .toggle input { width: 16px; height: 16px; accent-color: #ffb300; cursor: pointer; }
@@ -87,12 +87,12 @@
   .green { background: var(--green); }
 
   /* Obstacles: blocked squares (same look in every theme) */
-  #board .cell.blocked, .mini div.blocked {
+  .board .cell.blocked, .mini div.blocked {
     background: repeating-linear-gradient(45deg, #2c2c2c 0 5px, #161616 5px 10px) !important;
     box-shadow: inset 0 0 0 2px #0c0c0c !important; animation: none !important; filter: none !important;
   }
-  #board .cell.blocked { cursor: not-allowed; }
-  #board .cell.blocked:active { transform: none; }
+  .board .cell.blocked { cursor: not-allowed; }
+  .board .cell.blocked:active { transform: none; }
 
   /* Players */
   #players { display: flex; flex-direction: column; gap: 8px; }
@@ -155,6 +155,66 @@
   .bestRow .time { color: var(--gold); font-weight: bold; font-variant-numeric: tabular-nums; }
   .bestRow .when { color: var(--muted); font-size: 12px; margin-left: auto; text-align: right; }
 
+  /* ---------- Practice (single player board with paint + solver) ---------- */
+  #joinScreen .or { text-align: center; font-size: 12px; color: var(--muted); margin: 4px 0 -2px; }
+  #practiceScreen { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 16px; }
+  #practiceTop { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+  #practiceTop .title { font-size: 18px; font-weight: bold; }
+  #practiceTop .opts { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .pr { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .pr .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .pr .row label { font-size: 13px; color: var(--muted); }
+  .pr select { font-size: 14px; padding: 6px 8px; }
+  .pr button { font-size: 14px; padding: 6px 12px; }
+  .seg { display: inline-flex; border-radius: 8px; overflow: hidden; }
+  .seg button { border-radius: 0; background: #33333d; }
+  .seg button.on { background: #ffb300; color: #222; font-weight: bold; }
+  .pr .status { font-size: 15px; min-height: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+  .pr .status.solved { color: var(--gold); font-weight: bold; }
+  .pr .status.bad { color: #ff8787; }
+  .pr .board.compact { width: 300px; }
+  .pr .hint { font-size: 12px; color: var(--muted); text-align: center; max-width: 440px; }
+  .prSolver, .prHistory { width: 100%; background: #24242c; border-radius: 10px; padding: 10px 12px; }
+  .prSolver .shead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .prSolver .shead b { font-size: 14px; }
+  .prSolver .note { font-size: 13px; color: #bbb; margin-bottom: 8px; }
+  .strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .pStep { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px; border-radius: 8px;
+           border: 2px solid transparent; cursor: pointer; transition: opacity 0.2s; }
+  .pStep:hover { background: #3a3a46; opacity: 1; }
+  .pStep.current { border-color: #fff; background: #34343f; cursor: default; }
+  .pStep.done { opacity: 0.4; }
+  .pStep.static { cursor: default; }
+  .pStep .mini { width: 54px; }
+  .compactStrip .pStep .mini { width: 44px; }
+  .pStep .cap { font-size: 11px; max-width: 80px; text-align: center; line-height: 1.2; }
+  .pStep .cap.paint { color: #ffb300; }
+  .pStep .cap.jump { color: #74c0fc; }
+  .pStep .cap.solved { color: var(--gold); font-weight: bold; }
+  .strip .arrow { color: #777; font-size: 16px; margin-bottom: 14px; }
+  .mini .hl-click { outline: 2px solid #fff; outline-offset: 0; position: relative; z-index: 1; }
+  .mini .hl-paint { outline: 2px dashed #ffb300; outline-offset: 0; position: relative; z-index: 1; }
+  .prHistory summary { font-size: 14px; }
+  .prHistory .strip { margin-top: 8px; max-height: 260px; overflow-y: auto; }
+
+  /* Practice drawer on the right of the multiplayer screen (slides over the page) */
+  #practiceDrawer {
+    position: fixed; right: 0; top: 0; bottom: 0; width: 380px; z-index: 20;
+    background: #24242c; border-left: 1px solid #383844; box-shadow: -4px 0 24px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; transition: transform 0.22s ease;
+  }
+  #practiceDrawer.collapsed { transform: translateX(380px); box-shadow: none; }
+  #practiceToggle {
+    position: absolute; left: -38px; top: 16px; width: 38px; padding: 12px 0;
+    border-radius: 10px 0 0 10px; background: #24242c; border: 1px solid #383844; border-right: none;
+    writing-mode: vertical-rl; font-weight: bold; letter-spacing: 2px; font-size: 14px; gap: 8px;
+  }
+  #practiceToggle .ti { writing-mode: horizontal-tb; }
+  #practiceDrawer .head { padding: 16px 16px 10px; border-bottom: 1px solid #383844; }
+  #practiceDrawer .head h2 { margin: 0 0 4px; font-size: 18px; }
+  #practiceDrawer .head p { margin: 0; font-size: 12px; color: var(--muted); }
+  #practiceDrawerHost { overflow-y: auto; padding: 12px; flex: 1; }
+
   details summary { cursor: pointer; font-weight: bold; }
   .pastRound { margin-top: 10px; font-size: 14px; }
   .pastRound ol { margin: 4px 0 0; padding-left: 22px; }
@@ -198,7 +258,7 @@
 
   /* ---------- Board themes ----------
      .red = square still to flip, .green = done. Each theme restyles both,
-     on the main board (#board) and on every mini board (.mini). */
+     on the main board (.board) and on every mini board (.mini). */
   @keyframes flow { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
   @keyframes hue { to { filter: hue-rotate(360deg); } }
   @keyframes shimmer { from { background-position: -150% 0, 0 0; } to { background-position: 250% 0, 0 0; } }
@@ -231,8 +291,8 @@
     box-shadow: 0 0 8px #ffeb3b66 !important;
   }
   .theme-circuit .green { background: linear-gradient(90deg, transparent 47%, #1f6b3a 47% 53%, transparent 53%), #0e4d27; }
-  #board.theme-circuit, .themeItem .mini.theme-circuit { background: #062814; }
-  #board.theme-circuit { padding: 10px; border-radius: 10px; }
+  .board.theme-circuit, .themeItem .mini.theme-circuit { background: #062814; }
+  .board.theme-circuit { padding: 10px; border-radius: 10px; }
 
   .theme-denim .red { background: repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 4px), #8d2b2b; border: 2px dashed #e0a96d; }
   .theme-denim .green { background: repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 4px), #3b5b8c; border: 2px dashed #e0c08d; }
@@ -243,17 +303,17 @@
 
   .theme-ice .red { background: linear-gradient(135deg, rgba(255,255,255,0.55), transparent 45%), linear-gradient(160deg, #4fc3f7, #0277bd); box-shadow: inset 0 0 0 1px #e1f5fe88 !important; }
   .theme-ice .green { background: linear-gradient(135deg, rgba(255,255,255,0.7), transparent 50%), linear-gradient(160deg, #f1f8fe, #cfe8f7); }
-  #board.theme-ice, .themeItem .mini.theme-ice { background: #0d2233; }
-  #board.theme-ice { padding: 10px; border-radius: 12px; }
+  .board.theme-ice, .themeItem .mini.theme-ice { background: #0d2233; }
+  .board.theme-ice { padding: 10px; border-radius: 12px; }
 
   .theme-retro .red { background: #0f380f; }   .theme-retro .green { background: #9bbc0f; }
   .theme-retro div { border-radius: 0 !important; box-shadow: inset -3px -3px 0 rgba(0,0,0,0.25) !important; }
-  #board.theme-retro { background: #8bac0f; padding: 10px; border: 6px solid #306230; border-radius: 4px; }
+  .board.theme-retro { background: #8bac0f; padding: 10px; border: 6px solid #306230; border-radius: 4px; }
   .themeItem .mini.theme-retro { background: #306230; }
 
   .theme-forest .red { background: radial-gradient(circle at 35% 30%, #a1887f, #5d4037 55%, #3e2723); }
   .theme-forest .green { background: linear-gradient(135deg, #81c784, #2e7d32); border-radius: 0 60% 0 60% !important; }
-  #board.theme-forest { background: #1b2a1b; padding: 10px; border-radius: 12px; }
+  .board.theme-forest { background: #1b2a1b; padding: 10px; border-radius: 12px; }
 
   .theme-bubble .red, .theme-bubble .green { border-radius: 50% !important; }
   .theme-bubble .red { background: radial-gradient(circle at 30% 28%, #fff 0 8%, #ff8a80 22%, #e5736b); }
@@ -274,23 +334,23 @@
                 radial-gradient(1px 1px at 75% 70%, #fff7, transparent), #0b0b26;
     animation: twinkle 3s ease-in-out infinite;
   }
-  #board.theme-galaxy, .themeItem .mini.theme-galaxy { background: radial-gradient(ellipse at center, #1a1040, #05050f); }
-  #board.theme-galaxy { padding: 12px; border-radius: 14px; }
+  .board.theme-galaxy, .themeItem .mini.theme-galaxy { background: radial-gradient(ellipse at center, #1a1040, #05050f); }
+  .board.theme-galaxy { padding: 12px; border-radius: 14px; }
 
   .theme-lava .red {
     background: linear-gradient(45deg, #d50000, #ff6d00, #ffab00, #ff3d00, #d50000);
     background-size: 300% 300%; animation: flow 3s ease infinite; box-shadow: 0 0 14px #ff6d00aa !important;
   }
   .theme-lava .green { background: linear-gradient(135deg, #2b2b2b, #111 60%, #3a1a0a); }
-  #board.theme-lava, .themeItem .mini.theme-lava { background: #1a0a05; }
-  #board.theme-lava { padding: 12px; border-radius: 14px; box-shadow: inset 0 0 30px #ff3d0055; }
+  .board.theme-lava, .themeItem .mini.theme-lava { background: #1a0a05; }
+  .board.theme-lava { padding: 12px; border-radius: 14px; box-shadow: inset 0 0 30px #ff3d0055; }
 
   .theme-holo .red {
     background: linear-gradient(135deg, #ff6ec4, #7873f5, #4adede, #b2ff59, #ff6ec4);
     background-size: 300% 300%; animation: flow 4s linear infinite;
   }
   .theme-holo .green { background: linear-gradient(135deg, #e0e0e0, #fafafa 40%, #cfd8dc 60%, #eceff1); }
-  #board.theme-holo { padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #2a2440, #1e2a3a); }
+  .board.theme-holo { padding: 12px; border-radius: 14px; background: linear-gradient(135deg, #2a2440, #1e2a3a); }
 
   .theme-royal .red {
     background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.75) 50%, transparent 70%),
@@ -299,21 +359,21 @@
     box-shadow: 0 0 10px #fcf6ba66 !important;
   }
   .theme-royal .green { background: linear-gradient(135deg, #1c1c1c, #2e2e2e 40%, #111 60%, #262626); box-shadow: inset 0 0 0 2px #b38728 !important; }
-  #board.theme-royal, .themeItem .mini.theme-royal { background: #0d0d0d; }
-  #board.theme-royal { padding: 12px; border-radius: 14px; border: 3px solid #b38728; }
+  .board.theme-royal, .themeItem .mini.theme-royal { background: #0d0d0d; }
+  .board.theme-royal { padding: 12px; border-radius: 14px; border: 3px solid #b38728; }
 
   .theme-neon .red { background: #ff2bd6; box-shadow: 0 0 10px #ff2bd6, 0 0 22px #ff2bd6aa !important; }
   .theme-neon .green { background: #071c1f; box-shadow: inset 0 0 0 2px #00ffd5, 0 0 8px #00ffd555 !important; }
-  #board.theme-neon, .themeItem .mini.theme-neon { background: #0a0014; }
-  #board.theme-neon { padding: 12px; border-radius: 12px; }
+  .board.theme-neon, .themeItem .mini.theme-neon { background: #0a0014; }
+  .board.theme-neon { padding: 12px; border-radius: 12px; }
 
   .theme-aurora .red {
     background: linear-gradient(120deg, #00e676, #1de9b6, #7c4dff, #e040fb, #00e676);
     background-size: 300% 300%; animation: flow 6s ease infinite; box-shadow: 0 0 12px #1de9b688 !important;
   }
   .theme-aurora .green { background: linear-gradient(180deg, #0f2238, #06121f); }
-  #board.theme-aurora, .themeItem .mini.theme-aurora { background: linear-gradient(180deg, #0a1a2f, #020a14); }
-  #board.theme-aurora { padding: 12px; border-radius: 14px; }
+  .board.theme-aurora, .themeItem .mini.theme-aurora { background: linear-gradient(180deg, #0a1a2f, #020a14); }
+  .board.theme-aurora { padding: 12px; border-radius: 14px; }
 
   @keyframes pulse { 50% { filter: brightness(1.4) saturate(1.3); } }
   .theme-plasma .red {
@@ -321,8 +381,8 @@
     animation: pulse 1.6s ease-in-out infinite; box-shadow: 0 0 14px #ff4dff99 !important;
   }
   .theme-plasma .green { background: radial-gradient(circle at 50% 50%, #1b1035, #0d0820); }
-  #board.theme-plasma, .themeItem .mini.theme-plasma { background: #07041a; }
-  #board.theme-plasma { padding: 12px; border-radius: 14px; }
+  .board.theme-plasma, .themeItem .mini.theme-plasma { background: #07041a; }
+  .board.theme-plasma { padding: 12px; border-radius: 14px; }
 
   @keyframes rain { to { background-position: 0 40px, 0 0; } }
   .theme-matrix .red {
@@ -331,11 +391,21 @@
     box-shadow: 0 0 10px #00ff4688 !important;
   }
   .theme-matrix .green { background: #000d03; box-shadow: inset 0 0 0 1px #00ff4633 !important; }
-  #board.theme-matrix, .themeItem .mini.theme-matrix { background: #000; }
-  #board.theme-matrix { padding: 12px; border-radius: 10px; }
+  .board.theme-matrix, .themeItem .mini.theme-matrix { background: #000; }
+  .board.theme-matrix { padding: 12px; border-radius: 10px; }
 </style>
 </head>
 <body>
+  <!-- Practice drawer: right side of the multiplayer screen, separate from the race -->
+  <aside id="practiceDrawer" class="collapsed hidden">
+    <button id="practiceToggle" title="Show / hide practice"><i class="ti ti-chevron-left" id="practiceChevron"></i>Practice</button>
+    <div class="head">
+      <h2>Practice</h2>
+      <p>Paint any board and run the solver. Nothing here affects the race.</p>
+    </div>
+    <div id="practiceDrawerHost"></div>
+  </aside>
+
   <!-- Shop: slides over the page, open by default -->
   <aside id="shop" class="hidden">
     <button id="shopToggle" title="Show / hide the shop"><i class="ti ti-chevron-left" id="shopChevron"></i>Shop</button>
@@ -350,7 +420,7 @@
       </div>
       <div id="shopError" class="error"></div>
     </div>
-    <label class="toggle shopOption"><input type="checkbox" id="dotsToggle"> Show red/green dots on squares</label>
+    <label class="toggle shopOption"><input type="checkbox" class="dotsToggle"> Show red/green dots on squares</label>
     <div id="themeList"></div>
   </aside>
 
@@ -364,10 +434,25 @@
     <input id="roomInput" maxlength="6" placeholder="e.g. KQZD">
     <button id="joinBtn" class="primary">Join / Create room</button>
     <div id="joinError" class="error"></div>
+    <div class="or">or play on your own</div>
+    <button id="practiceBtn"><i class="ti ti-school"></i>Practice (single player)</button>
     <p class="muted" style="font-size:13px;margin:0">
       Click a square to flip it and its neighbours above, below, left and right.
       Striped squares are blocked. First to clear the whole board wins.
     </p>
+  </div>
+
+  <!-- Practice / single player (runs entirely in the browser, no room needed) -->
+  <div id="practiceScreen" class="hidden">
+    <div id="practiceTop" class="panel">
+      <button id="practiceBack"><i class="ti ti-arrow-left"></i>Back</button>
+      <span class="title">Practice</span>
+      <div class="opts">
+        <label class="toggle">Theme <select id="practiceTheme"></select></label>
+        <label class="toggle"><input type="checkbox" class="dotsToggle"> Show red/green dots</label>
+      </div>
+    </div>
+    <div id="practiceHost" class="panel"></div>
   </div>
 
   <!-- Game -->
@@ -391,7 +476,7 @@
         </div>
         <div id="waitingHost" class="muted"></div>
         <div id="timer"></div>
-        <div id="board"></div>
+        <div id="board" class="board"></div>
         <div id="boardMsg"></div>
         <div id="solverPanel" class="hidden">
           <div id="solverMini" class="mini"></div>
@@ -631,6 +716,8 @@
   function showJoin(msg = '') {
     $('gameScreen').classList.add('hidden');
     $('shop').classList.add('hidden');
+    $('practiceDrawer').classList.add('hidden');
+    $('practiceScreen').classList.add('hidden');
     $('joinScreen').classList.remove('hidden');
     $('joinError').textContent = msg;
     $('roomInput').value = new URLSearchParams(location.search).get('room') || '';
@@ -670,6 +757,8 @@
       $('gameScreen').classList.remove('hidden');
       $('shop').classList.remove('hidden');
       setShopOpen(localStorage.getItem('flipShopOpen') !== '0');   // open by default
+      $('practiceScreen').classList.add('hidden');
+      $('practiceDrawer').classList.remove('hidden');               // collapsed until opened
     }
 
     if (S.round && S.round.id !== local.roundId) {
@@ -814,6 +903,7 @@
     renderHistory();
     renderShop();
     renderProfile();
+    if (drawerPractice && mine.theme !== drawerTheme) { drawerTheme = mine.theme; drawerPractice.draw(); }
     tick();
   }
 
@@ -1159,14 +1249,340 @@
   });
   $('shopToggle').addEventListener('click', () => setShopOpen($('shop').classList.contains('collapsed')));
 
-  // Status dots option (remembered in this browser)
+  // ================================================================ practice
+  // A self-contained board with paint tools and a step-by-step solver. Runs entirely in the
+  // browser (no server). Used full-size as single player, and compact in the right drawer.
+
+  // Random solvable board needing at least 2 clicks (same approach as the server)
+  function practiceBoard(n, obstacles) {
+    obstacles = Math.max(0, Math.min(maxObstacles(n), obstacles | 0));
+    for (;;) {
+      const blocked = new Array(n * n).fill(false);
+      const idx = [...Array(n * n).keys()].sort(() => Math.random() - 0.5);
+      idx.slice(0, obstacles).forEach(i => blocked[i] = true);
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const board = new Array(n * n).fill(0);
+        for (let i = 0; i < n * n; i++)
+          if (!blocked[i] && Math.random() < 0.5) flipCells(n, i, blocked).forEach(j => board[j] ^= 1);
+        const sol = minSolution(n, board, blocked);
+        if (sol && sol.length >= 2) return { board, blocked };
+      }
+    }
+  }
+
+  const CELL_NAMES_3 = ['Top-left', 'Top', 'Top-right', 'Left', 'Center', 'Right', 'Bottom-left', 'Bottom', 'Bottom-right'];
+  const cellName = (n, i) => n === 3 ? CELL_NAMES_3[i] : `R${Math.floor(i / n) + 1} C${i % n + 1}`;
+  const blockedList = blocked => blocked.flatMap((b, i) => b ? [i] : []);
+
+  function createPractice(host, { compact = false, getTheme = () => 'classic' } = {}) {
+    const st = {
+      n: 3, obstacles: 0, board: [], blocked: [], start: null,
+      tool: 'click', clicks: 0, t0: null, solvedMs: null, optimal: null,
+      history: [], solving: false, plan: null, idx: 0
+    };
+
+    // ---- DOM
+    host.innerHTML = '';
+    const root = el('div', 'pr');
+    const row1 = el('div', 'row');
+    const sizeSel = el('select'), obsSel = el('select');
+    for (let n = 3; n <= 10; n++) sizeSel.appendChild(new Option(`${n} × ${n}`, n));
+    const newBtn = el('button'); newBtn.append(icon('dice-5'), 'New board');
+    const resetBtn = el('button'); resetBtn.append(icon('refresh'), 'Reset');
+    row1.append(el('label', '', 'Grid'), sizeSel, el('label', '', 'Obstacles'), obsSel, newBtn, resetBtn);
+
+    const row2 = el('div', 'row');
+    const seg = el('div', 'seg');
+    const tools = [['click', 'Play', 'hand-click'], ['color', 'Paint color', 'brush'], ['block', 'Paint obstacle', 'wall']];
+    const toolBtns = {};
+    for (const [id, label] of tools) {
+      const b = el('button', '', label);
+      b.addEventListener('click', () => { st.tool = id; draw(); });
+      toolBtns[id] = b;
+      seg.appendChild(b);
+    }
+    const solveBtn = el('button', 'primary');
+    row2.append(seg, solveBtn);
+
+    const status = el('div', 'status');
+    const board = el('div', 'board' + (compact ? ' compact' : ''));
+    const hint = el('div', 'hint',
+      'Play: a click flips the square and its neighbours. Paint color flips one square. ' +
+      'Paint obstacle blocks or unblocks a square. Painting makes the board your new starting puzzle.');
+
+    const solver = el('div', 'prSolver hidden');
+    const shead = el('div', 'shead');
+    const sTitle = el('b');
+    const nextBtn = el('button'); nextBtn.append(icon('player-track-next'), 'Do next step');
+    shead.append(sTitle, nextBtn);
+    const sNote = el('div', 'note');
+    const sStrip = el('div', 'strip' + (compact ? ' compactStrip' : ''));
+    solver.append(shead, sNote, sStrip);
+
+    const hist = el('details', 'prHistory');
+    const hSum = el('summary');
+    const hStrip = el('div', 'strip' + (compact ? ' compactStrip' : ''));
+    hist.append(hSum, hStrip);
+
+    root.append(row1, row2, status, board, hint, solver, hist);
+    host.appendChild(root);
+
+    // ---- helpers
+    const N = () => st.n * st.n;
+    const isSolved = () => st.board.every(v => v === 0);
+    const snapshot = () => ({ board: [...st.board], blocked: [...st.blocked] });
+
+    function fillObstacleOptions() {
+      const max = maxObstacles(st.n);
+      obsSel.innerHTML = '';
+      OBSTACLE_CHOICES.filter(k => k <= max).forEach(k => obsSel.appendChild(new Option(k ? String(k) : 'None', k)));
+      st.obstacles = Math.min(st.obstacles, max);
+      obsSel.value = OBSTACLE_CHOICES.filter(k => k <= st.obstacles).pop();
+    }
+
+    function buildCells() {
+      board.innerHTML = '';
+      board.style.gridTemplateColumns = `repeat(${st.n}, 1fr)`;
+      board.style.gap = st.n <= 5 ? (compact ? '5px' : '6px') : st.n <= 7 ? '4px' : '3px';
+      board.classList.toggle('small', st.n > 6 || compact);
+      for (let i = 0; i < N(); i++) {
+        const c = el('div', 'cell');
+        c.addEventListener('pointerdown', e => { e.preventDefault(); act(st.tool, i); });
+        board.appendChild(c);
+      }
+    }
+
+    // Current board becomes the starting puzzle (after New board or painting)
+    function setStart() {
+      st.start = snapshot();
+      const sol = minSolution(st.n, st.board, st.blocked);
+      st.optimal = sol ? sol.length : null;
+      st.clicks = 0; st.t0 = null; st.solvedMs = null;
+    }
+
+    function newBoard() {
+      const g = practiceBoard(st.n, st.obstacles);
+      st.board = g.board; st.blocked = g.blocked;
+      setStart();
+      st.history = [];
+      buildCells();
+      if (st.solving) replan();
+      draw();
+    }
+
+    function reset() {
+      st.board = [...st.start.board]; st.blocked = [...st.start.blocked];
+      st.clicks = 0; st.t0 = null; st.solvedMs = null;
+      st.history = [];
+      if (st.solving) replan();
+      draw();
+    }
+
+    // type: 'click' | 'color' | 'block' | 'jump'
+    function act(type, cell) {
+      const before = snapshot();
+      if (type === 'click') {
+        if (st.blocked[cell]) return;
+        flipCells(st.n, cell, st.blocked).forEach(j => st.board[j] ^= 1);
+        st.clicks++;
+        if (st.t0 === null) st.t0 = performance.now();
+        if (isSolved() && st.solvedMs === null) st.solvedMs = performance.now() - st.t0;
+      } else if (type === 'color') {
+        if (st.blocked[cell]) return;
+        st.board[cell] ^= 1;
+        setStart();
+      } else if (type === 'block') {
+        st.blocked[cell] = !st.blocked[cell];
+        st.board[cell] = 0;
+        setStart();
+      }
+      st.history.push({ type, cell, before, color: st.board[cell] ? 'red' : 'green', unblock: type === 'block' && !st.blocked[cell] });
+      followPlan();
+      draw();
+    }
+
+    // ---- solver
+    function replan() {
+      const clicks = minSolution(st.n, st.board, st.blocked);
+      st.idx = 0;
+      if (!clicks) { st.plan = { unsolvable: true, steps: [] }; return; }
+      const steps = [];
+      const b = [...st.board];
+      for (const cell of clicks) {
+        steps.push({ cell, before: [...b] });
+        flipCells(st.n, cell, st.blocked).forEach(j => b[j] ^= 1);
+      }
+      st.plan = { steps, final: b };
+    }
+
+    // If the board now matches the plan's next state, advance; otherwise plan again from here
+    function followPlan() {
+      if (!st.solving || !st.plan) return;
+      const p = st.plan, cur = st.board.join('');
+      if (!p.unsolvable && st.idx < p.steps.length) {
+        const expected = st.idx + 1 < p.steps.length ? p.steps[st.idx + 1].before : p.final;
+        if (cur === expected.join('')) { st.idx++; return; }
+      }
+      if (!p.unsolvable && st.idx >= p.steps.length && cur === p.final.join('')) return;
+      replan();
+    }
+
+    function jumpTo(k) {
+      const p = st.plan;
+      st.history.push({ type: 'jump', cell: -1, before: snapshot(), step: k, toEnd: k >= p.steps.length });
+      st.board = [...(k < p.steps.length ? p.steps[k].before : p.final)];
+      st.idx = k;
+      draw();
+    }
+
+    function card(boardArr, hlCell, hlType, caption, capClass, cls, onClick) {
+      const c = el('div', 'pStep' + (cls ? ' ' + cls : ''));
+      const m = miniGrid(boardArr.join(''), st.n, { theme: getTheme(), blocked: blockedList(st.blocked) });
+      if (hlCell >= 0) m.children[hlCell].classList.add(hlType === 'click' ? 'hl-click' : 'hl-paint');
+      c.appendChild(m);
+      c.appendChild(el('div', 'cap' + (capClass ? ' ' + capClass : ''), caption));
+      if (onClick) { c.title = 'Jump the board to here'; c.addEventListener('click', onClick); } else c.classList.add('static');
+      return c;
+    }
+    const arrow = () => el('div', 'arrow', '→');
+
+    function drawSolver() {
+      solver.classList.toggle('hidden', !st.solving);
+      solveBtn.replaceChildren(icon('bulb'), st.solving ? 'Hide solver' : 'Solve');
+      if (!st.solving) return;
+      const p = st.plan;
+      sStrip.innerHTML = '';
+      if (p.unsolvable) {
+        sTitle.textContent = "Can't be solved";
+        sNote.textContent = 'No combination of clicks clears this board. Paint it differently or press New board.';
+        nextBtn.disabled = true;
+        return;
+      }
+      const n = p.steps.length;
+      sTitle.textContent = n === 0 ? 'Already solved' : st.idx >= n ? 'Solved!' : `Step ${st.idx + 1} of ${n}`;
+      sNote.textContent = n === 0 ? 'Every square is green.' :
+        `${n} click${n === 1 ? '' : 's'} (the fewest possible). Click the outlined square in the boxed step, ` +
+        `or press "Do next step". Click any step to jump the board there.`;
+      nextBtn.disabled = st.idx >= n;
+      p.steps.forEach((s, k) => {
+        const cls = k < st.idx ? 'done' : k === st.idx ? 'current' : '';
+        sStrip.append(card(s.before, s.cell, 'click', `${k + 1}. ${cellName(st.n, s.cell)}`, '', cls,
+          k === st.idx ? null : () => jumpTo(k)), arrow());
+      });
+      sStrip.append(card(p.final, -1, null, 'Solved', 'solved', st.idx >= n ? 'current' : '',
+        st.idx >= n ? null : () => jumpTo(n)));
+    }
+
+    function drawHistory() {
+      hSum.textContent = `History (${st.history.length})`;
+      hStrip.innerHTML = '';
+      st.history.forEach((h, k) => {
+        let cap, capClass = '';
+        if (h.type === 'click') cap = `${k + 1}. Click ${cellName(st.n, h.cell)}`;
+        else if (h.type === 'color') { cap = `${k + 1}. Paint ${cellName(st.n, h.cell)} ${h.color}`; capClass = 'paint'; }
+        else if (h.type === 'block') { cap = `${k + 1}. ${h.unblock ? 'Unblock' : 'Block'} ${cellName(st.n, h.cell)}`; capClass = 'paint'; }
+        else { cap = h.toEnd ? `${k + 1}. Jump to solved` : `${k + 1}. Jump to step ${h.step + 1}`; capClass = 'jump'; }
+        const c = el('div', 'pStep static');
+        const m = miniGrid(h.before.board.join(''), st.n, { theme: getTheme(), blocked: blockedList(h.before.blocked) });
+        if (h.cell >= 0) m.children[h.cell].classList.add(h.type === 'click' ? 'hl-click' : 'hl-paint');
+        c.append(m, el('div', 'cap ' + capClass, cap));
+        hStrip.append(c, arrow());
+      });
+      const now = el('div', 'pStep static current');
+      now.append(miniGrid(st.board.join(''), st.n, { theme: getTheme(), blocked: blockedList(st.blocked) }),
+        el('div', 'cap', st.history.length ? 'Now' : 'Now (nothing pressed yet)'));
+      hStrip.appendChild(now);
+    }
+
+    function drawStatus() {
+      const best = st.optimal === null ? '' : ` · fewest possible ${st.optimal}`;
+      status.className = 'status';
+      if (st.optimal === null && !isSolved()) {
+        status.classList.add('bad');
+        status.textContent = "This board can't be solved";
+      } else if (isSolved() && st.solvedMs !== null) {
+        status.classList.add('solved');
+        status.replaceChildren(icon('circle-check'),
+          ` Solved in ${fmt(st.solvedMs)} with ${clicksText(st.clicks)}` + (st.optimal !== null ? ` (fewest possible ${st.optimal})` : ''));
+      } else {
+        const t = st.t0 === null ? 0 : performance.now() - st.t0;
+        status.textContent = `${fmt(t)} · ${clicksText(st.clicks)}${best}`;
+      }
+    }
+
+    function draw() {
+      setTheme(board, getTheme());
+      board.classList.toggle('dots', dotsOn);
+      [...board.children].forEach((c, i) =>
+        c.className = 'cell ' + (st.blocked[i] ? 'blocked' : st.board[i] ? 'red' : 'green'));
+      for (const [id, b] of Object.entries(toolBtns)) b.classList.toggle('on', st.tool === id);
+      drawStatus();
+      drawSolver();
+      drawHistory();
+    }
+
+    // ---- events
+    sizeSel.addEventListener('change', () => { st.n = Number(sizeSel.value); fillObstacleOptions(); newBoard(); });
+    obsSel.addEventListener('change', () => { st.obstacles = Number(obsSel.value); newBoard(); });
+    newBtn.addEventListener('click', newBoard);
+    resetBtn.addEventListener('click', reset);
+    solveBtn.addEventListener('click', () => { st.solving = !st.solving; if (st.solving) replan(); draw(); });
+    nextBtn.addEventListener('click', () => {
+      const p = st.plan;
+      if (p && !p.unsolvable && st.idx < p.steps.length) act('click', p.steps[st.idx].cell);
+    });
+    // Keep the timer ticking while a run is in progress
+    setInterval(() => { if (st.t0 !== null && st.solvedMs === null && host.isConnected) drawStatus(); }, 100);
+
+    sizeSel.value = st.n;
+    fillObstacleOptions();
+    newBoard();
+    return { draw };
+  }
+
+  // ---- Status dots option (remembered in this browser; applies to every board)
+  let dotsOn = localStorage.getItem('flipDots') === '1';
   const applyDots = on => {
-    $('dotsToggle').checked = on;
-    $('board').classList.toggle('dots', on);
+    dotsOn = on;
+    document.querySelectorAll('.dotsToggle').forEach(c => { c.checked = on; });
+    document.querySelectorAll('.board').forEach(b => b.classList.toggle('dots', on));
     localStorage.setItem('flipDots', on ? '1' : '0');
   };
-  $('dotsToggle').addEventListener('change', () => applyDots($('dotsToggle').checked));
-  applyDots(localStorage.getItem('flipDots') === '1');
+  document.querySelectorAll('.dotsToggle').forEach(c =>
+    c.addEventListener('change', () => applyDots(c.checked)));
+
+  // ---- Single player screen
+  let soloPractice = null;
+  const soloTheme = () => $('practiceTheme').value || 'classic';
+  for (const t of THEMES) $('practiceTheme').appendChild(new Option(t.name, t.id));
+  $('practiceTheme').value = localStorage.getItem('flipPracticeTheme') || 'classic';
+  $('practiceTheme').addEventListener('change', () => {
+    localStorage.setItem('flipPracticeTheme', soloTheme());
+    if (soloPractice) soloPractice.draw();
+  });
+  $('practiceBtn').addEventListener('click', () => {
+    $('joinScreen').classList.add('hidden');
+    $('practiceScreen').classList.remove('hidden');
+    if (!soloPractice) soloPractice = createPractice($('practiceHost'), { getTheme: soloTheme });
+  });
+  $('practiceBack').addEventListener('click', () => {
+    $('practiceScreen').classList.add('hidden');
+    $('joinScreen').classList.remove('hidden');
+  });
+
+  // ---- Practice drawer on the multiplayer screen (uses your current lobby theme)
+  let drawerPractice = null, drawerTheme = null;
+  function setDrawerOpen(open) {
+    $('practiceDrawer').classList.toggle('collapsed', !open);
+    $('practiceChevron').className = 'ti ' + (open ? 'ti-chevron-right' : 'ti-chevron-left');
+    if (open && !drawerPractice)
+      drawerPractice = createPractice($('practiceDrawerHost'), {
+        compact: true, getTheme: () => (myPlayer() || {}).theme || 'classic'
+      });
+  }
+  $('practiceToggle').addEventListener('click', () => setDrawerOpen($('practiceDrawer').classList.contains('collapsed')));
+
+  applyDots(dotsOn);
 
   // Resume after a page refresh, otherwise show the join form
   const saved = JSON.parse(sessionStorage.getItem('flipMe') || 'null');
